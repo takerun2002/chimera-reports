@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chimera Orderflow — GC 分析ダッシュボード</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+<style>
+:root {
+  --bg: #0d1117; --bg2: #161b22; --border: #30363d;
+  --text: #c9d1d9; --text2: #8b949e; --white: #f0f6fc;
+  --green: #3fb950; --red: #f85149; --yellow: #d29922;
+  --purple: #a371f7; --blue: #58a6ff; --orange: #d18616;
+  --green-bg: #23883826; --red-bg: #f8514926; --purple-bg: #a371f726;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, 'Hiragino Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+.container { max-width: 1400px; margin: 0 auto; padding: 16px; }
+h1 { font-size: 22px; color: var(--white); margin-bottom: 4px; }
+h2 { font-size: 16px; color: var(--white); margin: 20px 0 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.sub { color: var(--text2); font-size: 12px; margin-bottom: 16px; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
+.badge-green { background: var(--green-bg); color: var(--green); }
+.badge-red { background: var(--red-bg); color: var(--red); }
+.badge-purple { background: var(--purple-bg); color: var(--purple); }
+
+/* Layout */
+.grid-main { display: grid; grid-template-columns: 1fr 280px; gap: 12px; margin-top: 12px; }
+.grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 12px 0; }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+.card-val { font-size: 24px; font-weight: 700; color: var(--white); }
+.card-label { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+/* Footprint Chart */
+.fp-container { overflow-x: auto; overflow-y: hidden; }
+.fp-table { border-collapse: collapse; font-size: 10px; font-family: 'SF Mono', 'Menlo', monospace; }
+.fp-table th { background: var(--bg2); color: var(--text2); padding: 3px 6px; position: sticky; top: 0; z-index: 2; font-weight: 500; border-bottom: 1px solid var(--border); }
+.fp-table td { padding: 2px 4px; text-align: right; border-bottom: 1px solid #21262d; white-space: nowrap; min-width: 36px; }
+.fp-price { color: var(--text2); text-align: center !important; font-weight: 600; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+.fp-bid { color: var(--green); }
+.fp-ask { color: var(--red); }
+.fp-delta-pos { color: var(--green); font-weight: 600; }
+.fp-delta-neg { color: var(--red); font-weight: 600; }
+.fp-absorbed { background: rgba(209, 134, 22, 0.25); color: var(--yellow); font-weight: 700; }
+.fp-vup-row { background: rgba(88, 166, 255, 0.08); }
+.fp-signal { text-align: center !important; }
+.fp-long { color: var(--green); font-weight: 700; }
+.fp-short { color: var(--red); font-weight: 700; }
+
+/* Orderbook Panel */
+.ob-panel { max-height: 600px; overflow-y: auto; }
+.ob-row { display: flex; align-items: center; font-size: 11px; font-family: monospace; padding: 1px 0; }
+.ob-bar-bid { background: rgba(63, 185, 80, 0.3); height: 18px; display: flex; align-items: center; justify-content: flex-end; padding-right: 4px; }
+.ob-bar-ask { background: rgba(248, 81, 73, 0.3); height: 18px; display: flex; align-items: center; padding-left: 4px; }
+.ob-price { width: 70px; text-align: center; font-weight: 600; color: var(--white); font-size: 10px; }
+.ob-size { min-width: 40px; }
+.ob-spread { text-align: center; color: var(--yellow); font-size: 10px; padding: 4px 0; }
+
+/* VUP Indicator */
+.vup-line { color: var(--blue); font-weight: 600; }
+.session-tabs { display: flex; gap: 6px; margin: 8px 0; }
+.session-tab { padding: 4px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); transition: all 0.15s; }
+.session-tab.active { background: var(--blue); color: var(--white); border-color: var(--blue); }
+.session-tab:hover { border-color: var(--blue); }
+
+/* Signal list */
+.sig-list { max-height: 300px; overflow-y: auto; }
+.sig-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-bottom: 1px solid #21262d; font-size: 11px; }
+.sig-item:hover { background: rgba(255,255,255,0.02); }
+.sig-long { border-left: 3px solid var(--green); }
+.sig-short { border-left: 3px solid var(--red); }
+.sig-time { color: var(--text2); }
+.sig-price { color: var(--white); font-family: monospace; }
+.sig-tag { padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; }
+.sig-tag-tp { background: var(--green-bg); color: var(--green); }
+.sig-tag-sl { background: var(--red-bg); color: var(--red); }
+.sig-tag-trail { background: var(--purple-bg); color: var(--purple); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .grid-main { grid-template-columns: 1fr; }
+}
+
+/* Footer */
+.footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--border); color: #484f58; font-size: 10px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Chimera Orderflow — GC (COMEX 金先物)</h1>
+<p class="sub">
+  Footprint + VUP + Trapped Sellers/Buyers | バックテスト v06
+  <span class="badge badge-green">v0.6</span>
+  <span class="badge badge-purple">Long-Only + Trail</span>
+</p>
+
+<!-- Stats -->
+<div class="grid-stats" id="stats">
+  <div class="card"><div class="card-val" style="color:var(--green)" id="s-wr">87.0%</div><div class="card-label">勝率 (40/46)</div></div>
+  <div class="card"><div class="card-val" style="color:var(--green)" id="s-pf">12.89</div><div class="card-label">Profit Factor</div></div>
+  <div class="card"><div class="card-val" style="color:var(--green)" id="s-pnl">+1,084</div><div class="card-label">Total P&L (ticks)</div></div>
+  <div class="card"><div class="card-val" id="s-exp">+23.57</div><div class="card-label">期待値/trade</div></div>
+  <div class="card"><div class="card-val" id="s-n">46</div><div class="card-label">トレード数</div></div>
+  <div class="card"><div class="card-val vup-line" id="s-vup">—</div><div class="card-label">VUP (Session VWAP)</div></div>
+</div>
+
+<!-- Session Tabs -->
+<div class="session-tabs">
+  <div class="session-tab active" data-session="all">全セッション</div>
+  <div class="session-tab" data-session="asia">アジア (00-08 UTC)</div>
+  <div class="session-tab" data-session="london">ロンドン (08-13 UTC)</div>
+  <div class="session-tab" data-session="ny">ニューヨーク (13-22 UTC)</div>
+</div>
+
+<div class="grid-main">
+  <!-- Left: Footprint + Chart -->
+  <div>
+    <h2>累積損益曲線</h2>
+    <div class="card" style="padding:8px">
+      <canvas id="pnl-chart" height="180"></canvas>
+    </div>
+
+    <h2>Footprint チャート <span style="font-size:12px;color:var(--text2)">(直近20バー)</span></h2>
+    <div class="card fp-container" id="fp-container">
+      <table class="fp-table" id="fp-table">
+        <thead><tr id="fp-header"></tr></thead>
+        <tbody id="fp-body"></tbody>
+      </table>
+    </div>
+
+    <h2>シグナル一覧</h2>
+    <div class="card sig-list" id="sig-list"></div>
+  </div>
+
+  <!-- Right: Orderbook + Info -->
+  <div>
+    <h2>板情報 (L2)</h2>
+    <div class="card ob-panel" id="ob-panel">
+      <div style="text-align:center;color:var(--text2);padding:40px 0;font-size:12px">
+        バックテストモード<br>リアルタイム板はライブ接続時に表示
+      </div>
+    </div>
+
+    <h2>VUP フィルター</h2>
+    <div class="card" id="vup-info">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">
+        VUP (Volume-Weighted Average Price) をベースに方向を判断
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div style="flex:1;text-align:center;padding:8px;border-radius:6px;background:var(--green-bg)">
+          <div style="font-size:10px;color:var(--text2)">VUP 上</div>
+          <div style="font-size:14px;font-weight:700;color:var(--green)">LONG</div>
+        </div>
+        <div style="flex:1;text-align:center;padding:8px;border-radius:6px;background:var(--red-bg)">
+          <div style="font-size:10px;color:var(--text2)">VUP 下</div>
+          <div style="font-size:14px;font-weight:700;color:var(--red)">SHORT</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text2)">
+        <div style="margin-bottom:4px"><span style="color:var(--yellow)">&#9632;</span> 吸収 (Absorption) — Trapped Sellers/Buyers</div>
+        <div style="margin-bottom:4px"><span style="color:var(--green)">&#9650;</span> Long シグナル</div>
+        <div><span style="color:var(--red)">&#9660;</span> Short シグナル</div>
+      </div>
+    </div>
+
+    <h2>Trailing Stop</h2>
+    <div class="card">
+      <div style="font-size:11px;line-height:1.8">
+        <div><span style="color:var(--blue)">BE 発動</span>: +20 ticks → SL を Entry に移動</div>
+        <div><span style="color:var(--purple)">Trail</span>: 最高値から -12 ticks で追従</div>
+        <div style="margin-top:8px;color:var(--text2)">TP=30 / SL=15 / R:R=2:1</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Chimera Trade Bot v0.6 | Databento MBO | COMEX GC Futures | Generated 2026-04-02
+</div>
+
+</div>
+
+<script>
+// ============================================================
+// Demo data (will be replaced by backend JSON API)
+// ============================================================
+const DEMO_TRADES = [
+  {ts:"02-03 18:55",dir:"long",entry:4931.5,exit:4934.5,type:"tp",pnl:2.80,mfe:40.5,va:"VA_LOW"},
+  {ts:"02-05 08:30",dir:"long",entry:4943.4,exit:4946.4,type:"tp",pnl:2.80,mfe:32.6,va:""},
+  {ts:"02-05 21:32",dir:"long",entry:4818.6,exit:4821.6,type:"tp",pnl:2.80,mfe:34.9,va:""},
+  {ts:"02-06 11:19",dir:"long",entry:4904.7,exit:4907.7,type:"tp",pnl:2.80,mfe:35.7,va:""},
+  {ts:"02-06 21:41",dir:"long",entry:4985.8,exit:4988.8,type:"tp",pnl:2.80,mfe:36.9,va:"VA_LOW"},
+  {ts:"02-09 12:31",dir:"long",entry:5035.9,exit:5038.9,type:"tp",pnl:2.80,mfe:37.1,va:"VA_LOW"},
+  {ts:"02-09 19:34",dir:"long",entry:5102.5,exit:5105.5,type:"tp",pnl:2.80,mfe:38.9,va:""},
+  {ts:"02-10 18:15",dir:"long",entry:5039.5,exit:5038.0,type:"sl",pnl:-1.70,mfe:0.9,va:"VA_LOW"},
+  {ts:"02-11 18:50",dir:"long",entry:5111.7,exit:5110.2,type:"sl",pnl:-1.70,mfe:0.9,va:""},
+  {ts:"02-12 12:01",dir:"long",entry:5086.5,exit:5089.5,type:"tp",pnl:2.80,mfe:39.8,va:"VA_LOW"},
+  {ts:"02-17 10:12",dir:"long",entry:4955.4,exit:4958.4,type:"tp",pnl:2.80,mfe:38.8,va:""},
+  {ts:"02-17 18:21",dir:"long",entry:4898.4,exit:4901.4,type:"tp",pnl:2.80,mfe:38.4,va:""},
+  {ts:"02-20 19:52",dir:"long",entry:5098.0,exit:5101.0,type:"tp",pnl:2.80,mfe:40.4,va:"VA_LOW"},
+  {ts:"02-23 10:58",dir:"long",entry:5183.3,exit:5186.3,type:"tp",pnl:2.80,mfe:39.7,va:""},
+  {ts:"03-02 11:01",dir:"long",entry:5407.8,exit:5410.8,type:"tp",pnl:2.80,mfe:40.7,va:"VA_LOW"},
+];
+
+// Generate demo footprint data
+function generateDemoFootprint(n) {
+  const bars = [];
+  let basePrice = 5100;
+  for (let i = 0; i < n; i++) {
+    const levels = [];
+    const drift = (Math.random() - 0.45) * 5;
+    basePrice += drift;
+    const mid = Math.round(basePrice * 10) / 10;
+    for (let j = -5; j <= 5; j++) {
+      const p = Math.round((mid + j * 0.5) * 10) / 10;
+      const bv = Math.floor(Math.random() * 30);
+      const av = Math.floor(Math.random() * 30);
+      const absorbed = (bv > 20 && av > 15) || (av > 20 && bv > 15);
+      levels.push({ price: p, bid_vol: bv, ask_vol: av, delta: av - bv, absorbed });
+    }
+    const totalDelta = levels.reduce((s, l) => s + l.delta, 0);
+    const ts = new Date(2026, 2, 15, 8 + Math.floor(i / 4), (i % 4) * 15);
+    bars.push({ ts, levels, delta: totalDelta, close: mid, vup: mid - 2.5 + Math.random() * 5 });
+  }
+  return bars;
+}
+
+const fpBars = generateDemoFootprint(20);
+
+// ============================================================
+// Render Footprint Table
+// ============================================================
+function renderFootprint(bars) {
+  const header = document.getElementById('fp-header');
+  const body = document.getElementById('fp-body');
+
+  // Collect all price levels
+  const allPrices = new Set();
+  bars.forEach(b => b.levels.forEach(l => allPrices.add(l.price)));
+  const prices = [...allPrices].sort((a, b) => b - a);
+
+  // Header: time labels
+  let hdr = '<th style="min-width:60px">価格</th>';
+  bars.forEach((b, i) => {
+    const t = b.ts.toTimeString().slice(0, 5);
+    const dc = b.delta >= 0 ? 'var(--green)' : 'var(--red)';
+    hdr += `<th style="text-align:center;min-width:70px">
+      <div>${t}</div>
+      <div style="color:${dc};font-size:9px">Δ${b.delta >= 0 ? '+' : ''}${b.delta}</div>
+    </th>`;
+  });
+  header.innerHTML = hdr;
+
+  // Body: price rows x bar columns
+  let html = '';
+  prices.forEach(price => {
+    html += '<tr>';
+    html += `<td class="fp-price">${price.toFixed(1)}</td>`;
+    bars.forEach(b => {
+      const lv = b.levels.find(l => l.price === price);
+      if (!lv) {
+        html += '<td></td>';
+        return;
+      }
+      const isVup = Math.abs(price - b.vup) < 0.3;
+      const cls = lv.absorbed ? 'fp-absorbed' : (isVup ? 'fp-vup-row' : '');
+      const bv = lv.bid_vol || '';
+      const av = lv.ask_vol || '';
+      const dc = lv.delta >= 0 ? 'fp-delta-pos' : 'fp-delta-neg';
+      html += `<td class="${cls}">
+        <span class="fp-bid">${bv}</span>
+        <span style="color:var(--text2);font-size:8px">×</span>
+        <span class="fp-ask">${av}</span>
+      </td>`;
+    });
+    html += '</tr>';
+  });
+  body.innerHTML = html;
+}
+
+// ============================================================
+// Render Cumulative PnL Chart
+// ============================================================
+function renderPnLChart(trades) {
+  const ctx = document.getElementById('pnl-chart').getContext('2d');
+  let cum = 0;
+  const data = trades.map((t, i) => {
+    cum += t.pnl;
+    return { x: i + 1, y: Math.round(cum * 100) / 100 };
+  });
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [{
+        data,
+        borderColor: '#3fb950',
+        backgroundColor: 'rgba(63,185,80,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 3,
+        pointBackgroundColor: d => d.raw && d.raw.y >= 0 ? '#3fb950' : '#f85149',
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `P&L: ${ctx.raw.y >= 0 ? '+' : ''}${ctx.raw.y.toFixed(2)} ticks`
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          title: { display: true, text: 'トレード #', color: '#8b949e', font: { size: 10 } },
+          grid: { color: '#21262d' },
+          ticks: { color: '#8b949e', font: { size: 9 } },
+        },
+        y: {
+          title: { display: true, text: '累積 P&L (ticks)', color: '#8b949e', font: { size: 10 } },
+          grid: { color: '#21262d' },
+          ticks: { color: '#8b949e', font: { size: 9 } },
+        }
+      }
+    }
+  });
+}
+
+// ============================================================
+// Render Signal List
+// ============================================================
+function renderSignals(trades) {
+  const el = document.getElementById('sig-list');
+  let html = '';
+  trades.forEach(t => {
+    const cls = t.dir === 'long' ? 'sig-long' : 'sig-short';
+    const arrow = t.dir === 'long' ? '&#9650;' : '&#9660;';
+    const tagCls = t.type === 'tp' ? 'sig-tag-tp' : t.type === 'trail' ? 'sig-tag-trail' : 'sig-tag-sl';
+    const pnlColor = t.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    const va = t.va ? `<span class="badge badge-purple" style="font-size:8px">${t.va}</span>` : '';
+    html += `<div class="sig-item ${cls}">
+      <div>
+        <span class="sig-time">${t.ts}</span>
+        <span style="color:${t.dir === 'long' ? 'var(--green)' : 'var(--red)'};margin:0 4px">${arrow}</span>
+        <span class="sig-price">${t.entry.toFixed(1)}</span>
+        <span style="color:var(--text2);margin:0 2px">→</span>
+        <span class="sig-price">${t.exit.toFixed(1)}</span>
+        ${va}
+      </div>
+      <div>
+        <span style="color:${pnlColor};font-weight:600;margin-right:6px">${t.pnl >= 0 ? '+' : ''}${t.pnl.toFixed(2)}</span>
+        <span class="sig-tag ${tagCls}">${t.type.toUpperCase()}</span>
+      </div>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+// ============================================================
+// Session Tab Switching
+// ============================================================
+document.querySelectorAll('.session-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.session-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    // TODO: filter data by session
+  });
+});
+
+// ============================================================
+// Init
+// ============================================================
+renderFootprint(fpBars);
+renderPnLChart(DEMO_TRADES);
+renderSignals(DEMO_TRADES);
+</script>
+</body>
+</html>
