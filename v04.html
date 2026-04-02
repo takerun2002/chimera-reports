@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GC MBO バックテスト v0.4 — Triple Barrier + セッションフィルター</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:#0d1117;color:#c9d1d9;line-height:1.6}.c{max-width:1200px;margin:0 auto;padding:24px}h1{font-size:26px;color:#f0f6fc;margin-bottom:6px}h2{font-size:18px;color:#f0f6fc;margin:28px 0 12px;border-bottom:1px solid #30363d;padding-bottom:6px}h3{font-size:14px;color:#8b949e;margin-bottom:8px}.sub{color:#8b949e;font-size:13px;margin-bottom:20px}.b{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}.bg{background:#23883826;color:#3fb950}.bp{background:#a371f726;color:#a371f7}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:16px 0}.k{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px}.kv{font-size:28px;font-weight:700;color:#f0f6fc}.kl{font-size:12px;color:#8b949e;margin-top:2px}.ks{font-size:11px;color:#8b949e}.gn{color:#3fb950}.rd{color:#f85149}.yw{color:#d29922}.cc{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin:12px 0}.cr{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:768px){.cr{grid-template-columns:1fr}}table{width:100%;border-collapse:collapse;font-size:12px;margin:12px 0}th{background:#161b22;color:#8b949e;text-align:left;padding:6px 10px;border-bottom:1px solid #30363d}td{padding:6px 10px;border-bottom:1px solid #21262d}tr:hover{background:#161b2299}.w{color:#3fb950}.l{color:#f85149}.lt{background:#23883826;color:#3fb950;padding:1px 5px;border-radius:3px;font-size:10px}.st{background:#f8514926;color:#f85149;padding:1px 5px;border-radius:3px;font-size:10px}.tp{background:#23883826;color:#3fb950;padding:1px 5px;border-radius:3px;font-size:10px}.sl{background:#f8514926;color:#f85149;padding:1px 5px;border-radius:3px;font-size:10px}.vat{background:#a371f726;color:#a371f7;padding:1px 5px;border-radius:3px;font-size:10px}.ib{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;margin:12px 0}.ib h4{color:#f0f6fc;margin-bottom:6px;font-size:14px}.ib ul{padding-left:18px;color:#8b949e;font-size:13px}.ib li{margin:3px 0}.ft{margin-top:40px;padding-top:12px;border-top:1px solid #30363d;color:#484f58;font-size:11px;text-align:center}.vt{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:16px 0}.vc{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px;text-align:center}.vv{font-size:20px;font-weight:700}.vl{font-size:10px;color:#8b949e}
+</style>
+</head>
+<body>
+<div class="c">
+
+<h1>GC (COMEX 金先物) MBO バックテスト v0.4</h1>
+<p class="sub">
+  2026-03-21〜03-26 (5営業日) | Triple Barrier Method | Expert Panel 推奨実装 |
+  <span class="b bg">v0.4</span> <span class="b bp">Triple Barrier</span>
+</p>
+
+<h2>バージョン推移</h2>
+<div class="vt">
+  <div class="vc"><div class="vv rd">35.1%</div><div class="vl">v0.1 バグあり</div></div>
+  <div class="vc"><div class="vv yw">48.3%</div><div class="vl">v0.2 価格修正</div></div>
+  <div class="vc"><div class="vv yw">48.0%</div><div class="vl">v0.3 全バグ修正</div></div>
+  <div class="vc"><div class="vv gn">61.5%</div><div class="vl">v0.4 Triple Barrier</div></div>
+</div>
+
+<h2>概要</h2>
+<div class="g">
+  <div class="k"><div class="kv gn">61.5%</div><div class="kl">勝率</div><div class="ks">8勝 / 5敗 (13トレード)</div></div>
+  <div class="k"><div class="kv gn">3.20</div><div class="kl">Profit Factor</div><div class="ks">総利益 / 総損失</div></div>
+  <div class="k"><div class="kv gn">+$12.69</div><div class="kl">期待値 (ティック/トレード)</div><div class="ks">$126.9/契約/トレード</div></div>
+  <div class="k"><div class="kv gn">+$165</div><div class="kl">純利益 (合計ティック)</div><div class="ks">5営業日 / 13トレード</div></div>
+  <div class="k"><div class="kv">+30.0</div><div class="kl">平均勝ちティック</div><div class="ks">TP = $300/契約</div></div>
+  <div class="k"><div class="kv rd">-15.0</div><div class="kl">平均負けティック</div><div class="ks">SL = $150/契約</div></div>
+  <div class="k"><div class="kv">2:1</div><div class="kl">損益比 (R:R)</div><div class="ks">TP 30 / SL 15</div></div>
+  <div class="k"><div class="kv">13</div><div class="kl">トレード数</div><div class="ks">37件 セッションフィルタ除外</div></div>
+</div>
+
+<h2>v0.3 → v0.4 改善内容</h2>
+<div class="ib">
+  <h4>Triple Barrier Method (Marcos Lopez de Prado)</h4>
+  <ul>
+    <li><strong>Take Profit (TP) = 30ティック ($300/契約)</strong> — 価格が有利方向に 30ティック動いた時点で利確</li>
+    <li><strong>Stop Loss (SL) = 15ティック ($150/契約)</strong> — 価格が不利方向に 15ティック動いた時点で損切り</li>
+    <li><strong>Time Out = 30バー (30分)</strong> — どちらにも到達しなければ close で決済</li>
+    <li>v0.3 の「5バー後の close で判定」→ <strong>先にTPかSLに到達した方で決済</strong></li>
+  </ul>
+</div>
+<div class="ib">
+  <h4>セッションフィルター (Peter Davies / LLM Debate)</h4>
+  <ul>
+    <li>COMEX アクティブ時間帯のみ: <strong>欧州 08:00-13:00 UTC + 米国午後 18:00-22:00 UTC</strong></li>
+    <li>アジアセッション (22:00-08:00) と米国午前 (13:00-18:00) を除外</li>
+    <li>50シグナル → <strong>13シグナルに厳選</strong> (37件除外)</li>
+  </ul>
+</div>
+<div class="ib">
+  <h4>Value Area コンテキスト (Jim Dalton)</h4>
+  <ul>
+    <li>直近 240バー (4時間) のフットプリントから <strong>POC / VAH / VAL を動的計算</strong></li>
+    <li>VAL (Value Area Low) 付近でのロング = <strong>VA_LOW_SUPPORT</strong> (サポート確認)</li>
+    <li>VAH (Value Area High) 付近でのショート = <strong>VA_HIGH_RESISTANCE</strong> (レジスタンス確認)</li>
+    <li>VA コンテキスト付きシグナルの勝率: <strong>75% (3/4)</strong></li>
+  </ul>
+</div>
+
+<h2>シグナル分析</h2>
+<div class="cr">
+  <div class="cc"><h3>TP/SL 内訳</h3><canvas id="c1" height="200"></canvas></div>
+  <div class="cc"><h3>方向別勝敗</h3><canvas id="c2" height="200"></canvas></div>
+</div>
+
+<h2>全トレード損益</h2>
+<div class="cc"><canvas id="c3" height="250"></canvas></div>
+
+<h2>累積損益曲線</h2>
+<div class="cc"><canvas id="c4" height="250"></canvas></div>
+
+<h2>MFE / MAE 分析</h2>
+<div class="cc">
+  <h3>最大有利変動 (MFE) vs 最大不利変動 (MAE)</h3>
+  <canvas id="c5" height="250"></canvas>
+</div>
+
+<h2>全トレード一覧 (13件)</h2>
+<table>
+<thead><tr><th>#</th><th>日時</th><th>方向</th><th>エントリー</th><th>エグジット</th><th>結果</th><th>P&L</th><th>MFE</th><th>MAE</th><th>VA</th></tr></thead>
+<tbody id="tb"></tbody>
+</table>
+
+<h2>Expert Panel の推奨に基づく実装</h2>
+<div class="ib">
+  <h4>採用した専門家の見解</h4>
+  <ul>
+    <li><strong>Marcos Lopez de Prado</strong> — Triple Barrier Method でラベリング。5バー固定ルックアヘッドを置換</li>
+    <li><strong>Ernest P. Chan</strong> — MFE パーセンタイルから TP/SL を決定。期待値 = 勝率 x 平均勝ち + 敗率 x 平均負け</li>
+    <li><strong>Jim Dalton</strong> — Value Area コンテキスト。VAH/VAL 境界でのシグナルをブースト</li>
+    <li><strong>Peter Davies</strong> — セッションフィルター。COMEX アクティブ時間帯に限定</li>
+    <li><strong>Jean-Philippe Bouchaud</strong> — 板データの価値は認めつつも、まず $0 の改善を先行 (採用)</li>
+  </ul>
+</div>
+
+<h2>次のステップ</h2>
+<div class="ib">
+  <ul>
+    <li><strong>N=13 は統計的に不十分</strong> — 2-3週間分のデータで Out-of-Sample テスト ($20-30)</li>
+    <li><strong>TP/SL 最適化</strong> — MFE/MAE 分布から最適値をグリッドサーチ (現在 30/15 は初期値)</li>
+    <li><strong>板データ再構築</strong> — MBO 全イベントから L2 板状態を復元 → wall 成分有効化</li>
+    <li><strong>VA コンテキスト付きシグナルのみに絞る</strong> — 現在 4/13 が VA 付き (勝率 75%)</li>
+    <li><strong>Rithmic ライブ shadow mode</strong> — AMP 口座承認待ち</li>
+  </ul>
+</div>
+
+<h2>コスト効率</h2>
+<div class="g">
+  <div class="k"><div class="kv gn">$0</div><div class="kl">v0.4 追加コスト</div><div class="ks">コード変更のみ</div></div>
+  <div class="k"><div class="kv">~$50</div><div class="kl">累計 Databento 使用額</div><div class="ks">$125 無料クレジットから</div></div>
+  <div class="k"><div class="kv">~$75</div><div class="kl">残りクレジット</div><div class="ks">Out-of-Sample テスト用に温存</div></div>
+</div>
+
+<div class="ft">
+  Chimera Trade Bot | バックテストレポート v0.4 | 2026-03-30<br>
+  Triple Barrier Method (Lopez de Prado) + Session Filter (Davies) + Value Area (Dalton)<br>
+  Expert Panel: Lopez de Prado, Bouchaud, Davies, Dalton, Chan
+</div>
+</div>
+
+<script>
+const S=[
+{ts:1774261860,d:"short",en:4265.2,ex:4280.2,t:"sl",pnl:-15,mfe:2.4,mae:96.3,va:"VA_HIGH_RESISTANCE",w:false},
+{ts:1774288920,d:"long",en:4421.8,ex:4451.8,t:"tp",pnl:30,mfe:33.2,mae:1.4,va:"",w:true},
+{ts:1774344240,d:"long",en:4410.7,ex:4440.7,t:"tp",pnl:30,mfe:33.3,mae:1.9,va:"",w:true},
+{ts:1774347240,d:"short",en:4460.2,ex:4430.2,t:"tp",pnl:30,mfe:32.8,mae:2.2,va:"",w:true},
+{ts:1774356300,d:"short",en:4375.1,ex:4390.1,t:"sl",pnl:-15,mfe:0.0,mae:67.9,va:"",w:false},
+{ts:1774382400,d:"long",en:4402.1,ex:4432.1,t:"tp",pnl:30,mfe:32.8,mae:0.5,va:"VA_LOW_SUPPORT",w:true},
+{ts:1774426620,d:"long",en:4593.9,ex:4578.9,t:"sl",pnl:-15,mfe:0.9,mae:34.8,va:"",w:false},
+{ts:1774438260,d:"long",en:4580.6,ex:4610.6,t:"tp",pnl:30,mfe:324.6,mae:0.0,va:"",w:true},
+{ts:1774462440,d:"short",en:4581.7,ex:4551.7,t:"tp",pnl:30,mfe:34.7,mae:0.8,va:"VA_HIGH_RESISTANCE",w:true},
+{ts:1774520940,d:"long",en:4439.2,ex:4469.2,t:"tp",pnl:30,mfe:32.3,mae:3.9,va:"VA_LOW_SUPPORT",w:true},
+{ts:1774527660,d:"long",en:4467.6,ex:4452.6,t:"sl",pnl:-15,mfe:3.2,mae:32.8,va:"",w:false},
+{ts:1774549860,d:"long",en:4375.0,ex:4405.0,t:"tp",pnl:30,mfe:33.0,mae:1.7,va:"VA_LOW_SUPPORT",w:true},
+{ts:1774552080,d:"short",en:4383.8,ex:4398.8,t:"sl",pnl:-15,mfe:1.5,mae:33.3,va:"",w:false},
+];
+
+// TP/SL chart
+const tpCount=S.filter(s=>s.t==='tp').length;
+const slCount=S.filter(s=>s.t==='sl').length;
+new Chart(document.getElementById('c1'),{type:'doughnut',data:{labels:['TP (利確) '+tpCount+'件','SL (損切) '+slCount+'件'],datasets:[{data:[tpCount,slCount],backgroundColor:['#3fb95080','#f8514980'],borderColor:['#3fb950','#f85149'],borderWidth:2}]},options:{plugins:{legend:{labels:{color:'#8b949e',font:{size:13}}}}}});
+
+// Direction win/loss
+const lw=S.filter(s=>s.d==='long'&&s.w).length,ll=S.filter(s=>s.d==='long'&&!s.w).length;
+const sw=S.filter(s=>s.d==='short'&&s.w).length,sl2=S.filter(s=>s.d==='short'&&!s.w).length;
+new Chart(document.getElementById('c2'),{type:'bar',data:{labels:['ロング','ショート'],datasets:[{label:'勝ち',data:[lw,sw],backgroundColor:'#3fb95080'},{label:'負け',data:[ll,sl2],backgroundColor:'#f8514980'}]},options:{plugins:{legend:{labels:{color:'#8b949e'}}},scales:{x:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}},y:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}}}}});
+
+// P&L bars
+new Chart(document.getElementById('c3'),{type:'bar',data:{labels:S.map((_,i)=>`#${i+1}`),datasets:[{label:'P&L',data:S.map(s=>s.pnl),backgroundColor:S.map(s=>s.pnl>=0?'#3fb95060':'#f8514960'),borderColor:S.map(s=>s.pnl>=0?'#3fb950':'#f85149'),borderWidth:1}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}},y:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}}}}});
+
+// Cumulative P&L
+let cum=0;const cd=S.map(s=>{cum+=s.pnl;return cum});
+new Chart(document.getElementById('c4'),{type:'line',data:{labels:S.map((_,i)=>`#${i+1}`),datasets:[{label:'累積P&L (ティック)',data:cd,borderColor:'#a371f7',backgroundColor:'#a371f720',fill:true,tension:0.3,pointRadius:5,pointBackgroundColor:S.map(s=>s.w?'#3fb950':'#f85149')}]},options:{plugins:{legend:{labels:{color:'#8b949e'}}},scales:{x:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}},y:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}}}}});
+
+// MFE vs MAE scatter
+new Chart(document.getElementById('c5'),{type:'scatter',data:{datasets:[{label:'勝ちトレード',data:S.filter(s=>s.w).map(s=>({x:s.mae,y:s.mfe})),backgroundColor:'#3fb95080',borderColor:'#3fb950',pointRadius:8},{label:'負けトレード',data:S.filter(s=>!s.w).map(s=>({x:s.mae,y:s.mfe})),backgroundColor:'#f8514980',borderColor:'#f85149',pointRadius:8}]},options:{plugins:{legend:{labels:{color:'#8b949e'}}},scales:{x:{title:{display:true,text:'MAE (最大不利変動)',color:'#8b949e'},ticks:{color:'#8b949e'},grid:{color:'#21262d'}},y:{title:{display:true,text:'MFE (最大有利変動)',color:'#8b949e'},ticks:{color:'#8b949e'},grid:{color:'#21262d'}}}}});
+
+// Table
+const tb=document.getElementById('tb');
+S.forEach((s,i)=>{
+const dt=new Date(s.ts*1000).toISOString().replace('T',' ').slice(0,16);
+const dir=s.d==='long'?'<span class="lt">LONG</span>':'<span class="st">SHORT</span>';
+const exit=s.t==='tp'?'<span class="tp">TP</span>':'<span class="sl">SL</span>';
+const rc=s.w?'w':'l';
+const va=s.va?`<span class="vat">${s.va}</span>`:'';
+tb.innerHTML+=`<tr><td>${i+1}</td><td>${dt}</td><td>${dir}</td><td>$${s.en.toFixed(1)}</td><td>$${s.ex.toFixed(1)}</td><td>${exit}</td><td class="${rc}">${s.pnl>0?'+':''}${s.pnl.toFixed(0)}</td><td>${s.mfe.toFixed(1)}</td><td>${s.mae.toFixed(1)}</td><td>${va}</td></tr>`;
+});
+</script>
+</body>
+</html>

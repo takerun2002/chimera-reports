@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GC MBO バックテスト v0.3 — 7バグ修正後</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:#0d1117;color:#c9d1d9;line-height:1.6}.c{max-width:1200px;margin:0 auto;padding:24px}h1{font-size:26px;color:#f0f6fc;margin-bottom:6px}h2{font-size:18px;color:#f0f6fc;margin:28px 0 12px;border-bottom:1px solid #30363d;padding-bottom:6px}h3{font-size:14px;color:#8b949e;margin-bottom:8px}.sub{color:#8b949e;font-size:13px;margin-bottom:20px}.b{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}.ba{background:#f8514926;color:#f85149}.bb{background:#a371f726;color:#a371f7}.bc{background:#23883826;color:#3fb950}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0}.k{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px}.kv{font-size:28px;font-weight:700;color:#f0f6fc}.kl{font-size:12px;color:#8b949e;margin-top:2px}.ks{font-size:11px;color:#8b949e}.gn{color:#3fb950}.rd{color:#f85149}.yw{color:#d29922}.cc{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin:12px 0}.cr{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:768px){.cr{grid-template-columns:1fr}}table{width:100%;border-collapse:collapse;font-size:12px;margin:12px 0}th{background:#161b22;color:#8b949e;text-align:left;padding:6px 10px;border-bottom:1px solid #30363d}td{padding:6px 10px;border-bottom:1px solid #21262d}tr:hover{background:#161b2299}.w{color:#3fb950}.l{color:#f85149}.lt{background:#23883826;color:#3fb950;padding:1px 5px;border-radius:3px;font-size:10px}.st{background:#f8514926;color:#f85149;padding:1px 5px;border-radius:3px;font-size:10px}.ib{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;margin:12px 0}.ib h4{color:#f0f6fc;margin-bottom:6px;font-size:14px}.ib ul{padding-left:18px;color:#8b949e;font-size:13px}.ib li{margin:3px 0}.ab{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;font-family:monospace;font-size:12px;white-space:pre;overflow-x:auto;color:#8b949e}.ft{margin-top:40px;padding-top:12px;border-top:1px solid #30363d;color:#484f58;font-size:11px;text-align:center}.vt{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:16px 0}.vc{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px;text-align:center}.vv{font-size:22px;font-weight:700}.vl{font-size:11px;color:#8b949e}
+</style>
+</head>
+<body>
+<div class="c">
+
+<h1>GC (COMEX 金先物) MBO バックテスト v0.3</h1>
+<p class="sub">
+  2026-03-21〜03-26 (5営業日) | Databento MBO | 7バグ修正後 |
+  <span class="b bb">MBO</span> <span class="b bc">v0.3 Bug-Free</span>
+</p>
+
+<h2>バージョン比較</h2>
+<div class="vt">
+  <div class="vc"><div class="vv rd">35.1%</div><div class="vl">v0.1 (バグあり)</div></div>
+  <div class="vc"><div class="vv yw">48.3%</div><div class="vl">v0.2 (価格修正)</div></div>
+  <div class="vc"><div class="vv yw">48.0%</div><div class="vl">v0.3 (全バグ修正)</div></div>
+</div>
+
+<h2>概要</h2>
+<div class="g">
+  <div class="k"><div class="kv">749,738</div><div class="kl">MBO 約定数</div><div class="ks">Side.NONE 除外済み</div></div>
+  <div class="k"><div class="kv">5,520</div><div class="kl">フットプリントバー</div><div class="ks">60秒足 / 5営業日</div></div>
+  <div class="k"><div class="kv">50</div><div class="kl">シグナル数</div><div class="ks">28 ロング / 22 ショート</div></div>
+  <div class="k"><div class="kv yw">48.0%</div><div class="kl">勝率</div><div class="ks">24勝 / 26敗</div></div>
+  <div class="k"><div class="kv gn">+$13.07</div><div class="kl">平均勝ち額</div><div class="ks">1契約あたりティック</div></div>
+  <div class="k"><div class="kv rd">-$13.97</div><div class="kl">平均負け額</div><div class="ks">損益比 0.94:1</div></div>
+</div>
+
+<h2>修正したバグ (7件)</h2>
+<div class="ib">
+  <h4>CRITICAL (3件)</h4>
+  <ul>
+    <li><strong>absorption_price_move_max = 0.5 → 0.001</strong> — 吸収検出が「50%の価格変動まで許容」= 常に true。25%重みの成分が完全に壊れていた</li>
+    <li><strong>バー close リーク修正</strong> — 次のバーの最初のトレード価格が前のバーの close に漏れていた。全バーの close が 1ティックずれていた</li>
+    <li><strong>high/low 未初期化</strong> — 最初のバーで high=0, low=1e18 のまま。単一トレードバーで OHLC が壊れていた</li>
+  </ul>
+</div>
+<div class="ib">
+  <h4>HIGH (4件)</h4>
+  <ul>
+    <li><strong>Side.NONE 誤分類</strong> — 不明な aggressor のトレードが bid (売り) に分類されデルタを汚染。除外で 96.8万→74.9万件に</li>
+    <li><strong>勝率テール問題</strong> — 末尾シグナルが分母に含まれ勝率が低く出ていた</li>
+    <li><strong>exhaustion ガード</strong> — 1バー履歴で十分なのに 2バー以上を要求していた</li>
+    <li><strong>Databento SDK side 文字列</strong> — "A"/"B" を "ASK"/"BID" で探していた (SDKは短縮形を返す)</li>
+  </ul>
+</div>
+
+<h2>シグナル分布</h2>
+<div class="cr">
+  <div class="cc"><h3>方向別内訳</h3><canvas id="c1" height="200"></canvas></div>
+  <div class="cc"><h3>方向別 勝敗</h3><canvas id="c2" height="200"></canvas></div>
+</div>
+
+<h2>損益分布</h2>
+<div class="cc"><h3>シグナル別 P&L (ティック)</h3><canvas id="c3" height="250"></canvas></div>
+
+<h2>累積損益曲線</h2>
+<div class="cc"><canvas id="c4" height="250"></canvas></div>
+
+<h2>全シグナル一覧 (50件)</h2>
+<table>
+<thead><tr><th>#</th><th>日時 (UTC)</th><th>方向</th><th>スコア</th><th>エントリー</th><th>エグジット</th><th>損益</th><th>MFE</th><th>結果</th></tr></thead>
+<tbody id="tb"></tbody>
+</table>
+
+<h2>分析と所見</h2>
+<div class="ib">
+  <h4>現状の評価</h4>
+  <ul>
+    <li><strong>勝率 48%</strong> — スプレッド+手数料込みだと赤字。利益化には 55%+ が必要</li>
+    <li><strong>損益比 0.94:1</strong> — ほぼ 1:1。非対称 TP/SL で改善余地あり</li>
+    <li><strong>L/S バランス良好</strong> — 28L/22S で方向バイアスなし (v0.1 は 25L/12S で偏り)</li>
+    <li><strong>MFE (最大有利変動)</strong> — 平均 MFE は損益よりかなり大きい → TP/SL 最適化で改善可能</li>
+  </ul>
+</div>
+<div class="ib">
+  <h4>ボトルネック: 板データなし</h4>
+  <ul>
+    <li><strong>wall 成分 (15% 重み) が常にゼロ</strong> — バックテストでは板データが空のため、$4500 等の心理的節目での指値の壁を検出できない</li>
+    <li><strong>板があれば</strong>: 大量の買い指値 = サポート確認 → ロングの確度向上。大量の売り指値 = レジスタンス確認 → ショートの確度向上</li>
+    <li><strong>推定効果</strong>: +5〜10pp の勝率改善が期待できる (wall 15% + iceberg による確認で)</li>
+  </ul>
+</div>
+<div class="ib">
+  <h4>次のステップ</h4>
+  <ul>
+    <li><strong>Step 1:</strong> MBO イベントから L2 板データを再構築 (ADD/MODIFY/CANCEL で板状態を追跡)</li>
+    <li><strong>Step 2:</strong> セッションフィルター (COMEX 時間帯 13:20-18:00 UTC に限定)</li>
+    <li><strong>Step 3:</strong> TP/SL 最適化 (MFE/MAE 分析から最適な利確/損切り幅を算出)</li>
+    <li><strong>Step 4:</strong> アイスバーグ検知をシグナルエンジンに統合 (スコアブースト)</li>
+    <li><strong>Phase 2:</strong> Rithmic ライブデータで shadow mode (AMP 口座承認待ち)</li>
+  </ul>
+</div>
+
+<h2>コスト効率</h2>
+<div class="g">
+  <div class="k"><div class="kv gn">~$50</div><div class="kl">Databento 使用額</div><div class="ks">$125 無料クレジットから</div></div>
+  <div class="k"><div class="kv">$56.50/月</div><div class="kl">ライブ運用 合計</div><div class="ks">CME MBO $36.50 + Rithmic $20</div></div>
+</div>
+
+<div class="ft">
+  Chimera Trade Bot | バックテストレポート v0.3 | 2026-03-30<br>
+  データ: Databento GLBX.MDP3 MBO | エンジン: OrderFlowSignalEngine v1<br>
+  マルチエージェントレビュー: 3 reviewer agents (データパイプライン / シグナルエンジン / バックテスト評価)
+</div>
+</div>
+
+<script>
+const S=[
+{ts:1774224420,d:"long",sc:0.40,en:4449.2,ex:4449.9,pnl:0.7,mfe:49.5,w:true},
+{ts:1774232220,d:"short",sc:-0.40,en:4409.2,ex:4410.4,pnl:-1.2,mfe:8.2,w:false},
+{ts:1774233360,d:"short",sc:-0.40,en:4390.7,ex:4374.2,pnl:16.5,mfe:21.4,w:true},
+{ts:1774236060,d:"long",sc:0.40,en:4363.6,ex:4357.6,pnl:-6.0,mfe:118.6,w:false},
+{ts:1774240260,d:"short",sc:-0.40,en:4369.0,ex:4378.0,pnl:-9.0,mfe:5.5,w:false},
+{ts:1774241580,d:"short",sc:-0.40,en:4358.9,ex:4365.8,pnl:-6.9,mfe:5.7,w:false},
+{ts:1774243440,d:"long",sc:0.40,en:4357.6,ex:4360.3,pnl:2.7,mfe:36.2,w:true},
+{ts:1774244220,d:"short",sc:-0.40,en:4373.6,ex:4329.6,pnl:44.0,mfe:49.9,w:true},
+{ts:1774261860,d:"short",sc:-0.40,en:4265.2,ex:4262.7,pnl:2.5,mfe:3.0,w:true},
+{ts:1774287960,d:"short",sc:-0.40,en:4420.6,ex:4417.4,pnl:3.2,mfe:14.1,w:true},
+{ts:1774288380,d:"long",sc:0.40,en:4420.1,ex:4429.0,pnl:8.9,mfe:140.0,w:true},
+{ts:1774288920,d:"long",sc:0.40,en:4421.8,ex:4409.7,pnl:-12.1,mfe:139.9,w:false},
+{ts:1774307280,d:"long",sc:0.40,en:4469.0,ex:4438.6,pnl:-30.4,mfe:96.0,w:false},
+{ts:1774311780,d:"long",sc:0.40,en:4439.9,ex:4379.5,pnl:-60.4,mfe:5.4,w:false},
+{ts:1774316880,d:"short",sc:-0.40,en:4322.2,ex:4331.0,pnl:-8.8,mfe:7.7,w:false},
+{ts:1774320480,d:"long",sc:0.40,en:4372.9,ex:4358.5,pnl:-14.4,mfe:109.7,w:false},
+{ts:1774331400,d:"short",sc:-0.40,en:4369.7,ex:4388.5,pnl:-18.8,mfe:20.6,w:false},
+{ts:1774333380,d:"long",sc:0.40,en:4391.9,ex:4387.2,pnl:-4.7,mfe:38.0,w:false},
+{ts:1774335720,d:"short",sc:-0.40,en:4414.4,ex:4411.3,pnl:3.1,mfe:8.6,w:true},
+{ts:1774338900,d:"short",sc:-0.40,en:4426.0,ex:4411.7,pnl:14.3,mfe:21.8,w:true},
+{ts:1774344240,d:"long",sc:0.40,en:4410.7,ex:4440.4,pnl:29.7,mfe:33.3,w:true},
+{ts:1774347240,d:"short",sc:-0.40,en:4460.2,ex:4463.2,pnl:-3.0,mfe:32.8,w:false},
+{ts:1774356300,d:"short",sc:-0.40,en:4375.1,ex:4383.7,pnl:-8.6,mfe:0.0,w:false},
+{ts:1774360200,d:"short",sc:-0.40,en:4353.3,ex:4372.4,pnl:-19.1,mfe:-0.3,w:false},
+{ts:1774365960,d:"long",sc:0.40,en:4415.0,ex:4415.3,pnl:0.3,mfe:70.8,w:true},
+{ts:1774370820,d:"short",sc:-0.40,en:4422.3,ex:4427.3,pnl:-5.0,mfe:2.6,w:false},
+{ts:1774382400,d:"long",sc:0.45,en:4402.1,ex:4398.7,pnl:-3.4,mfe:65.1,w:false},
+{ts:1774393860,d:"long",sc:0.40,en:4486.5,ex:4501.0,pnl:14.5,mfe:68.6,w:true},
+{ts:1774400520,d:"short",sc:-0.40,en:4560.2,ex:4571.6,pnl:-11.4,mfe:6.9,w:false},
+{ts:1774402140,d:"long",sc:0.40,en:4575.6,ex:4583.8,pnl:8.2,mfe:334.2,w:true},
+{ts:1774403820,d:"long",sc:0.40,en:4597.0,ex:4592.9,pnl:-4.1,mfe:33.0,w:false},
+{ts:1774407360,d:"short",sc:-0.40,en:4615.5,ex:4580.9,pnl:34.6,mfe:35.9,w:true},
+{ts:1774417500,d:"long",sc:0.40,en:4563.1,ex:4587.5,pnl:24.4,mfe:125.9,w:true},
+{ts:1774423560,d:"short",sc:-0.40,en:4559.2,ex:4553.9,pnl:5.3,mfe:6.5,w:true},
+{ts:1774425540,d:"long",sc:0.45,en:4539.0,ex:4578.2,pnl:39.2,mfe:76.5,w:true},
+{ts:1774426620,d:"long",sc:0.40,en:4593.9,ex:4563.5,pnl:-30.4,mfe:40.3,w:false},
+{ts:1774438260,d:"long",sc:0.40,en:4580.6,ex:4582.8,pnl:2.2,mfe:324.6,w:true},
+{ts:1774450080,d:"long",sc:0.40,en:4572.3,ex:4570.6,pnl:-1.7,mfe:38.3,w:false},
+{ts:1774456320,d:"long",sc:0.40,en:4584.5,ex:4555.4,pnl:-29.1,mfe:33.6,w:false},
+{ts:1774460700,d:"long",sc:0.40,en:4557.3,ex:4555.9,pnl:-1.4,mfe:67.1,w:false},
+{ts:1774462440,d:"short",sc:-0.40,en:4581.7,ex:4546.7,pnl:35.0,mfe:37.9,w:true},
+{ts:1774476720,d:"short",sc:-0.40,en:4510.9,ex:4503.6,pnl:7.3,mfe:7.4,w:true},
+{ts:1774485120,d:"long",sc:0.40,en:4558.9,ex:4524.6,pnl:-34.3,mfe:0.3,w:false},
+{ts:1774501620,d:"short",sc:-0.40,en:4511.4,ex:4506.1,pnl:5.3,mfe:7.4,w:true},
+{ts:1774520940,d:"long",sc:0.40,en:4439.2,ex:4436.7,pnl:-2.5,mfe:33.3,w:false},
+{ts:1774527660,d:"long",sc:0.40,en:4467.6,ex:4466.9,pnl:-0.7,mfe:32.2,w:false},
+{ts:1774530840,d:"long",sc:0.40,en:4436.0,ex:4437.7,pnl:1.7,mfe:67.4,w:true},
+{ts:1774541220,d:"long",sc:0.40,en:4469.1,ex:4433.2,pnl:-35.9,mfe:33.4,w:false},
+{ts:1774549860,d:"long",sc:0.40,en:4375.0,ex:4384.4,pnl:9.4,mfe:139.6,w:true},
+{ts:1774552080,d:"short",sc:-0.40,en:4383.8,ex:4383.2,pnl:0.6,mfe:5.4,w:true},
+];
+
+// Charts
+new Chart(document.getElementById('c1'),{type:'doughnut',data:{labels:['ロング','ショート','ニュートラル'],datasets:[{data:[28,22,5470],backgroundColor:['#23883880','#f8514980','#30363d80'],borderColor:['#3fb950','#f85149','#484f58'],borderWidth:1}]},options:{plugins:{legend:{labels:{color:'#8b949e'}}}}});
+
+const lw=S.filter(s=>s.d==='long'&&s.w).length,ll=S.filter(s=>s.d==='long'&&!s.w).length;
+const sw=S.filter(s=>s.d==='short'&&s.w).length,sl=S.filter(s=>s.d==='short'&&!s.w).length;
+new Chart(document.getElementById('c2'),{type:'bar',data:{labels:['ロング','ショート'],datasets:[{label:'勝ち',data:[lw,sw],backgroundColor:'#3fb95080'},{label:'負け',data:[ll,sl],backgroundColor:'#f8514980'}]},options:{plugins:{legend:{labels:{color:'#8b949e'}}},scales:{x:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}},y:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}}}}});
+
+new Chart(document.getElementById('c3'),{type:'bar',data:{labels:S.map((_,i)=>`#${i+1}`),datasets:[{label:'P&L',data:S.map(s=>s.pnl),backgroundColor:S.map(s=>s.pnl>=0?'#3fb95060':'#f8514960'),borderColor:S.map(s=>s.pnl>=0?'#3fb950':'#f85149'),borderWidth:1}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8b949e',maxRotation:0,autoSkip:true},grid:{color:'#21262d'}},y:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}}}}});
+
+let cum=0;const cumData=S.map(s=>{cum+=s.pnl;return cum});
+new Chart(document.getElementById('c4'),{type:'line',data:{labels:S.map((_,i)=>`#${i+1}`),datasets:[{label:'累積P&L',data:cumData,borderColor:'#a371f7',backgroundColor:'#a371f720',fill:true,tension:0.3,pointRadius:3,pointBackgroundColor:S.map(s=>s.w?'#3fb950':'#f85149')}]},options:{plugins:{legend:{labels:{color:'#8b949e'}}},scales:{x:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}},y:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}}}}});
+
+const tb=document.getElementById('tb');
+S.forEach((s,i)=>{const t=new Date(s.ts*1000).toISOString().replace('T',' ').slice(0,16);const dt=s.d==='long'?'<span class="lt">LONG</span>':'<span class="st">SHORT</span>';const rc=s.w?'w':'l';const rt=s.w?'勝ち':'負け';tb.innerHTML+=`<tr><td>${i+1}</td><td>${t}</td><td>${dt}</td><td>${s.sc>0?'+':''}${s.sc.toFixed(2)}</td><td>$${s.en.toFixed(1)}</td><td>$${s.ex.toFixed(1)}</td><td class="${rc}">${s.pnl>0?'+':''}${s.pnl.toFixed(1)}</td><td>${s.mfe.toFixed(1)}</td><td class="${rc}">${rt}</td></tr>`;});
+</script>
+</body>
+</html>

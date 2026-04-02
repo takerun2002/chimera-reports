@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GC MBO バックテスト v0.5 — Trades-Only</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:#0d1117;color:#c9d1d9;line-height:1.6}.c{max-width:1200px;margin:0 auto;padding:24px}h1{font-size:26px;color:#f0f6fc;margin-bottom:6px}h2{font-size:18px;color:#f0f6fc;margin:28px 0 12px;border-bottom:1px solid #30363d;padding-bottom:6px}.sub{color:#8b949e;font-size:13px;margin-bottom:20px}.b{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}.bg{background:#23883826;color:#3fb950}.br{background:#f8514926;color:#f85149}.bp{background:#a371f726;color:#a371f7}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:16px 0}.k{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px}.kv{font-size:28px;font-weight:700;color:#f0f6fc}.kl{font-size:12px;color:#8b949e;margin-top:2px}.gn{color:#3fb950}.rd{color:#f85149}.yw{color:#d29922}.cc{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin:12px 0}table{width:100%;border-collapse:collapse;font-size:12px;margin:12px 0}th{background:#161b22;color:#8b949e;text-align:left;padding:6px 10px;border-bottom:1px solid #30363d}td{padding:6px 10px;border-bottom:1px solid #21262d}tr:hover{background:#161b2299}.w{color:#3fb950}.l{color:#f85149}.lt{background:#23883826;color:#3fb950;padding:1px 5px;border-radius:3px;font-size:10px}.st{background:#f8514926;color:#f85149;padding:1px 5px;border-radius:3px;font-size:10px}.tp{background:#23883826;color:#3fb950;padding:1px 5px;border-radius:3px;font-size:10px}.sl{background:#f8514926;color:#f85149;padding:1px 5px;border-radius:3px;font-size:10px}.vat{background:#a371f726;color:#a371f7;padding:1px 5px;border-radius:3px;font-size:10px}.ft{margin-top:40px;padding-top:12px;border-top:1px solid #30363d;color:#484f58;font-size:11px;text-align:center}
+</style>
+</head>
+<body>
+<div class="c">
+
+<h1>GC (COMEX 金先物) MBO バックテスト v0.5</h1>
+<p class="sub">
+  Trades-Only | Triple Barrier (TP=30.0/SL=15.0) | Slippage 0.2 ticks RT |
+  <span class="b bg">v0.5</span>
+  <span class="b br">L2 OFF</span>
+</p>
+
+<h2>概要</h2>
+<div class="g">
+  <div class="k"><div class="kv gn">87.0%</div><div class="kl">勝率</div><div class="kl">40勝 / 6敗 (N=46)</div></div>
+  <div class="k"><div class="kv gn">12.89</div><div class="kl">Profit Factor</div></div>
+  <div class="k"><div class="kv gn">+23.57</div><div class="kl">Net Expectancy (ticks)</div><div class="kl">スリッページ 0.2 込み</div></div>
+  <div class="k"><div class="kv gn">+1084.4</div><div class="kl">Total P&L (ticks)</div></div>
+  <div class="k"><div class="kv">+29.39</div><div class="kl">平均勝ちティック (net)</div></div>
+  <div class="k"><div class="kv rd">-15.20</div><div class="kl">平均負けティック (net)</div></div>
+  <div class="k"><div class="kv">52,122</div><div class="kl">バー数</div></div>
+  <div class="k"><div class="kv">46</div><div class="kl">トレード数</div><div class="kl">60件セッション除外</div></div>
+</div>
+
+<h2>Long / Short 内訳</h2>
+<div class="g">
+  <div class="k"><div class="kv gn">Long</div><div class="kl">N=46 WR=87.0%</div><div class="kl">PnL: +1084.4</div></div>
+  <div class="k"><div class="kv rd">Short</div><div class="kl">N=0 WR=0.0%</div><div class="kl">PnL: +0.0</div></div>
+</div>
+
+<h2>累積損益曲線</h2>
+<div class="cc"><canvas id="c1" height="250"></canvas></div>
+
+<h2>Walk-Forward Analysis (IS=20d / OOS=5d)</h2>
+<p>全3窓でプラス</p>
+<table>
+<thead><tr><th>Window</th><th>OOS開始</th><th>N</th><th>WR</th><th>PnL</th><th>PF</th></tr></thead>
+<tbody><tr><td>1</td><td>2026-03-03</td><td>4</td><td>100.0%</td><td class="w">+102.8</td><td>0</td></tr>
+<tr><td>2</td><td>2026-03-10</td><td>6</td><td>100.0%</td><td class="w">+178.8</td><td>0</td></tr>
+<tr><td>3</td><td>2026-03-17</td><td>7</td><td>57.1%</td><td class="w">+73.6</td><td>2.61</td></tr>
+</tbody>
+</table>
+
+<h2>全トレード一覧 (上位46件)</h2>
+<table>
+<thead><tr><th>#</th><th>日時</th><th>方向</th><th>Entry</th><th>Exit</th><th>結果</th><th>Net P&L</th><th>MFE</th><th>MAE</th><th>VA</th></tr></thead>
+<tbody><tr><td>1</td><td>02-03 18:55</td><td><span class="lt">LONG</span></td><td>$4931.5</td><td>$4961.5</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>40.5</td><td>2.1</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>2</td><td>02-03 20:48</td><td><span class="lt">LONG</span></td><td>$4970.7</td><td>$4955.7</td><td><span class="sl">SL</span></td><td class="l">-15.20</td><td>0.2</td><td>20.9</td><td></td></tr>
+<tr><td>3</td><td>02-05 08:30</td><td><span class="lt">LONG</span></td><td>$4943.4</td><td>$4973.4</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>32.6</td><td>4.3</td><td></td></tr>
+<tr><td>4</td><td>02-05 21:32</td><td><span class="lt">LONG</span></td><td>$4818.6</td><td>$4848.6</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>34.9</td><td>9.4</td><td></td></tr>
+<tr><td>5</td><td>02-06 11:19</td><td><span class="lt">LONG</span></td><td>$4904.7</td><td>$4934.7</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>35.7</td><td>1.2</td><td></td></tr>
+<tr><td>6</td><td>02-06 21:41</td><td><span class="lt">LONG</span></td><td>$4985.8</td><td>$5015.8</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>36.9</td><td>3.0</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>7</td><td>02-09 12:31</td><td><span class="lt">LONG</span></td><td>$5035.9</td><td>$5065.9</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>37.1</td><td>3.4</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>8</td><td>02-09 19:34</td><td><span class="lt">LONG</span></td><td>$5102.5</td><td>$5132.5</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>38.9</td><td>0.3</td><td></td></tr>
+<tr><td>9</td><td>02-10 18:15</td><td><span class="lt">LONG</span></td><td>$5039.5</td><td>$5024.5</td><td><span class="sl">SL</span></td><td class="l">-15.20</td><td>0.9</td><td>19.0</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>10</td><td>02-11 09:48</td><td><span class="lt">LONG</span></td><td>$5131.6</td><td>$5116.6</td><td><span class="sl">SL</span></td><td class="l">-15.20</td><td>0.0</td><td>44.6</td><td></td></tr>
+<tr><td>11</td><td>02-11 19:03</td><td><span class="lt">LONG</span></td><td>$5111.7</td><td>$5141.7</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>37.0</td><td>2.8</td><td></td></tr>
+<tr><td>12</td><td>02-12 12:01</td><td><span class="lt">LONG</span></td><td>$5086.5</td><td>$5116.5</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>39.8</td><td>0.0</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>13</td><td>02-12 19:59</td><td><span class="lt">LONG</span></td><td>$4965.0</td><td>$4995.0</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>141.5</td><td>17.1</td><td></td></tr>
+<tr><td>14</td><td>02-17 10:12</td><td><span class="lt">LONG</span></td><td>$4955.4</td><td>$4985.4</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>38.8</td><td>16.6</td><td></td></tr>
+<tr><td>15</td><td>02-17 18:21</td><td><span class="lt">LONG</span></td><td>$4898.4</td><td>$4928.4</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>38.4</td><td>1.9</td><td></td></tr>
+<tr><td>16</td><td>02-18 12:18</td><td><span class="lt">LONG</span></td><td>$4948.0</td><td>$4978.0</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>35.0</td><td>3.4</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>17</td><td>02-18 19:11</td><td><span class="lt">LONG</span></td><td>$5014.3</td><td>$5044.3</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>37.1</td><td>1.5</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>18</td><td>02-19 19:39</td><td><span class="lt">LONG</span></td><td>$4999.8</td><td>$5029.8</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>38.6</td><td>3.0</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>19</td><td>02-20 19:52</td><td><span class="lt">LONG</span></td><td>$5098.0</td><td>$5128.0</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>40.4</td><td>17.0</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>20</td><td>02-23 10:58</td><td><span class="lt">LONG</span></td><td>$5183.3</td><td>$5213.3</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>39.7</td><td>0.9</td><td></td></tr>
+<tr><td>21</td><td>02-23 20:23</td><td><span class="lt">LONG</span></td><td>$5244.2</td><td>$5274.2</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>40.9</td><td>0.5</td><td></td></tr>
+<tr><td>22</td><td>02-25 10:43</td><td><span class="lt">LONG</span></td><td>$5198.8</td><td>$5228.8</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>34.8</td><td>5.3</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>23</td><td>02-25 21:03</td><td><span class="lt">LONG</span></td><td>$5177.6</td><td>$5207.6</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>40.8</td><td>3.9</td><td></td></tr>
+<tr><td>24</td><td>02-26 11:04</td><td><span class="lt">LONG</span></td><td>$5189.4</td><td>$5219.4</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>41.4</td><td>0.9</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>25</td><td>02-27 12:06</td><td><span class="lt">LONG</span></td><td>$5205.2</td><td>$5235.2</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>40.9</td><td>0.0</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>26</td><td>03-02 11:01</td><td><span class="lt">LONG</span></td><td>$5407.8</td><td>$5437.8</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>40.7</td><td>1.6</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>27</td><td>03-05 08:08</td><td><span class="lt">LONG</span></td><td>$5162.7</td><td>$5192.7</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>36.9</td><td>6.3</td><td></td></tr>
+<tr><td>28</td><td>03-05 20:14</td><td><span class="lt">LONG</span></td><td>$5088.2</td><td>$5118.2</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>41.9</td><td>0.0</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>29</td><td>03-05 20:18</td><td><span class="lt">LONG</span></td><td>$5104.2</td><td>$5117.8</td><td><span class="">TRAIL</span></td><td class="w">+13.40</td><td>25.6</td><td>16.9</td><td></td></tr>
+<tr><td>30</td><td>03-09 10:35</td><td><span class="lt">LONG</span></td><td>$5098.8</td><td>$5128.8</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>37.2</td><td>2.2</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>31</td><td>03-10 08:41</td><td><span class="lt">LONG</span></td><td>$5201.2</td><td>$5231.2</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>39.5</td><td>1.4</td><td></td></tr>
+<tr><td>32</td><td>03-10 11:36</td><td><span class="lt">LONG</span></td><td>$5193.6</td><td>$5223.6</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>36.9</td><td>3.6</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>33</td><td>03-11 12:05</td><td><span class="lt">LONG</span></td><td>$5193.8</td><td>$5223.8</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>81.2</td><td>0.5</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>34</td><td>03-11 18:08</td><td><span class="lt">LONG</span></td><td>$5180.4</td><td>$5210.4</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>38.7</td><td>0.8</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>35</td><td>03-13 08:36</td><td><span class="lt">LONG</span></td><td>$5084.5</td><td>$5114.5</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>38.8</td><td>1.1</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>36</td><td>03-16 09:08</td><td><span class="lt">LONG</span></td><td>$4989.0</td><td>$5019.0</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>36.3</td><td>2.0</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>37</td><td>03-17 11:25</td><td><span class="lt">LONG</span></td><td>$5013.7</td><td>$5043.7</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>35.6</td><td>2.5</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>38</td><td>03-18 09:26</td><td><span class="lt">LONG</span></td><td>$4997.0</td><td>$5027.0</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>35.3</td><td>2.5</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>39</td><td>03-26 10:29</td><td><span class="lt">LONG</span></td><td>$4439.2</td><td>$4469.2</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>32.3</td><td>3.9</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>40</td><td>03-26 12:21</td><td><span class="lt">LONG</span></td><td>$4467.6</td><td>$4452.6</td><td><span class="sl">SL</span></td><td class="l">-15.20</td><td>3.2</td><td>32.8</td><td></td></tr>
+<tr><td>41</td><td>03-26 18:31</td><td><span class="lt">LONG</span></td><td>$4375.0</td><td>$4405.0</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>33.0</td><td>1.7</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>42</td><td>03-27 08:36</td><td><span class="lt">LONG</span></td><td>$4460.4</td><td>$4445.4</td><td><span class="sl">SL</span></td><td class="l">-15.20</td><td>17.6</td><td>32.6</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>43</td><td>03-27 09:13</td><td><span class="lt">LONG</span></td><td>$4457.7</td><td>$4442.7</td><td><span class="sl">SL</span></td><td class="l">-15.20</td><td>0.7</td><td>34.8</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>44</td><td>03-27 20:02</td><td><span class="lt">LONG</span></td><td>$4542.2</td><td>$4572.2</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>34.5</td><td>31.3</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>45</td><td>03-30 09:08</td><td><span class="lt">LONG</span></td><td>$4559.7</td><td>$4589.7</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>34.1</td><td>31.3</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+<tr><td>46</td><td>03-30 18:58</td><td><span class="lt">LONG</span></td><td>$4531.4</td><td>$4561.4</td><td><span class="tp">TP</span></td><td class="w">+29.80</td><td>31.7</td><td>18.6</td><td><span class="vat">VA_LOW_SUPPORT</span></td></tr>
+</tbody>
+</table>
+
+<div class="ft">
+  Chimera Trade Bot | バックテストレポート v0.5 | 2026-04-02<br>
+  Trades-Only | TP=30.0/SL=15.0 | Slippage=0.2 RT
+</div>
+</div>
+
+<script>
+const cumData = [29.8, 14.6, 44.4, 74.2, 104.0, 133.8, 163.6, 193.4, 178.2, 163.0, 192.8, 222.6, 252.4, 282.2, 312.0, 341.8, 371.6, 401.4, 431.2, 461.0, 490.8, 520.6, 550.4, 580.2, 610.0, 639.8, 669.6, 699.4, 712.8, 742.6, 772.4, 802.2, 832.0, 861.8, 891.6, 921.4, 951.2, 981.0, 1010.8, 995.6, 1025.4, 1010.2, 995.0, 1024.8, 1054.6, 1084.4];
+new Chart(document.getElementById('c1'),{type:'line',data:{labels:cumData.map((_,i)=>`#${i+1}`),datasets:[{label:'累積P&L (net ticks)',data:cumData,borderColor:'#a371f7',backgroundColor:'#a371f720',fill:true,tension:0.3,pointRadius:3}]},options:{plugins:{legend:{labels:{color:'#8b949e'}}},scales:{x:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}},y:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}}}}});
+</script>
+</body>
+</html>
